@@ -173,26 +173,29 @@
   <div class="slide">
     <div class="slide-inner">
       <span class="tag">The Full Stack</span>
-      <h2>Dependency Chain</h2>
-      <div class="stack-layer layer-vivian">
-        <span class="stack-layer-name">🪙 Vivian / V</span>
-        <span class="stack-layer-desc">AI COO for med spas. Encodes XiVara's intent at the infrastructure level. Knows the clinic, not the company.</span>
-      </div>
-      <div class="stack-layer layer-orc">
-        <span class="stack-layer-name">🎼 ORC</span>
-        <span class="stack-layer-desc">Behavior tree executor. Skills → executable trees. LLM nodes tunable via GEPA. Sheet-service component inside the ORC harness.</span>
-      </div>
-      <div class="stack-layer layer-grain">
-        <span class="stack-layer-name">🌾 Grain</span>
-        <span class="stack-layer-desc">Event-sourced CQRS framework. Immutable events, projections, multi-tenant isolation, L1/L2 cache. Behavior trees + DSPy extensions built in.</span>
+      <h2>Grain → Everything</h2>
+      <div class="stack-layer layer-litellm">
+        <span class="stack-layer-name">⚡ litellm-clj</span>
+        <span class="stack-layer-desc">Universal LLM provider interface. Foundation for all LLM calls.</span>
       </div>
       <div class="stack-layer layer-dscloj">
         <span class="stack-layer-name">🧠 DSCloj</span>
-        <span class="stack-layer-desc">Declarative LLM modules in pure Clojure. Malli-typed I/O. predict → validate → prompt → call → parse. Primary LLM pipeline path.</span>
+        <span class="stack-layer-desc">Declarative LLM modules. Malli-typed I/O. Sits on litellm-clj.</span>
       </div>
-      <div class="stack-layer layer-litellm">
-        <span class="stack-layer-name">⚡ litellm-clj</span>
-        <span class="stack-layer-desc">Universal LLM provider interface. OpenAI, Anthropic, Gemini, Mistral, Ollama, Azure. Streaming, function calling, runtime provider switching.</span>
+      <div class="stack-layer layer-grain">
+        <span class="stack-layer-name">🌾 Grain</span>
+        <span class="stack-layer-desc">The core framework. Everything else is a consumer of Grain — not a layer above it.</span>
+      </div>
+      <p style="color:var(--muted); font-size:13px; margin: 12px 0 8px 0">Grain consumers — each a peer, not a hierarchy:</p>
+      <div class="grid-2">
+        <div class="grid-cell">
+          <div class="grid-cell-label">🎼 sheet-service (ORC)</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">Behavior tree execution engine. One Grain service among many.</div>
+        </div>
+        <div class="grid-cell">
+          <div class="grid-cell-label">🪙 XiVara product services</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">17 service components — scheduling, clinical, POS, payments, memberships, inventory, messaging…</div>
+        </div>
       </div>
     </div>
   </div>
@@ -298,30 +301,48 @@
     </div>
   </div>
 
-  <!-- 9. ORC -->
+  <!-- 9. SHEET-SERVICE -->
   <div class="slide">
     <div class="slide-inner">
-      <span class="tag">Layer 4 · ObneyAI/orc <span class="lang-tag clj">Clojure + ClojureScript</span> <span class="lang-tag prod">Production</span></span>
-      <h2>ORC — The Behavior Tree Engine</h2>
-      <p>Full Polylith + Grain application harness. ORC = <em>Orchestral</em>. Short for orchestration.</p>
+      <span class="tag">sheet-service (ORC) · Grain Consumer <span class="lang-tag clj">Clojure</span> <span class="lang-tag prod">Production</span></span>
+      <h2>The Behavior Tree Engine</h2>
+      <p>ORC = <em>Orchestral</em>. sheet-service is a Grain service component — one peer among XiVara's 17, not a separate layer.</p>
+      <ul>
+        <li><strong>Node types:</strong> leaf, sequence, fallback, condition, LLM-condition, parallel, map-each</li>
+        <li><strong>Executors:</strong> AI (LLM via DSCloj), code (Clojure), tool (MCP)</li>
+        <li><strong>Blackboard:</strong> keyed data context with Malli schemas — shared state across a tree run</li>
+        <li><strong>Versioning:</strong> draft/published modes, stashes, full execution tracing with per-node timing</li>
+        <li><strong>Retry/timeout/repeat decorators</strong> — production-grade reliability on every node</li>
+      </ul>
+      <p class="slide-subtitle" style="margin-top:10px">⚠️ ObneyAI/orc repo is archived/defunct. sheet-service lives in XiVara/xivara-workshop as a Polylith component.</p>
+    </div>
+  </div>
+
+  <!-- 9b. XIVARA 17 SERVICES -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">XiVara Product · github.com/XiVara/xivara-workshop</span>
+      <h2>17 Tiny Information Systems</h2>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:10px">Each service = schemas + commands + events + read models + queries + todo processors</p>
       <div class="grid-2">
         <div class="grid-cell">
-          <div class="grid-cell-label">sheet-service (ORC core)</div>
-          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">Behavior trees · all node types · versioning · full tracing · self-description</div>
+          <div class="grid-cell-label">Patient Ops</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">patient-service · scheduling-service · clinical-service · messaging-service</div>
         </div>
         <div class="grid-cell">
-          <div class="grid-cell-label">Other Components</div>
-          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">crm-service · user-service · langfuse · jwt · email · file-store · crypto · url-presigner</div>
+          <div class="grid-cell-label">Money</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">pos-service · payment-service · membership-service · package-service</div>
         </div>
         <div class="grid-cell">
-          <div class="grid-cell-label">Frontend</div>
-          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">ClojureScript · UIx (React) · re-frame · ShadCN · Reitit · Datastar (server-rendered, no SPA)</div>
+          <div class="grid-cell-label">Clinic Ops</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">staff-service · inventory-service · location-service · reporting-service</div>
         </div>
         <div class="grid-cell">
-          <div class="grid-cell-label">Sidecar</div>
-          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">Python 3.13 + UV alongside Clojure backend. For genuine Python ML workloads.</div>
+          <div class="grid-cell-label">Platform</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">user-service · auth-service · sheet-service · notification-service · tenant-service</div>
         </div>
       </div>
+      <p class="slide-subtitle" style="margin-top:10px"><code>skip-event-storage</code> — run a command + collect its events without writing them, so the caller bundles everything into one atomic transaction. Cross-service coordination without two-phase commits.</p>
     </div>
   </div>
 
@@ -390,12 +411,31 @@
       <span class="tag">The Executive Fleet</span>
       <h2>Who Runs on What</h2>
       <ul>
-        <li><strong>Carl (Justin's CPO agent)</strong> — OpenClaw <span class="lang-tag ts">TypeScript</span> — Obsidian vault, Fireflies, Claude Code sessions, DSPy/Orc skill modules</li>
-        <li><strong>Frederick (Daryl's AI agent)</strong> — OpenClaw <span class="lang-tag ts">TypeScript</span> — Builds Orc/DSPy modules, fleet optimization, meta-task: improve all agents</li>
+        <li><strong>Carl (Justin's CPO agent)</strong> — OpenClaw <span class="lang-tag ts">TypeScript</span> — Product/architecture translation layer. Intermediate between technical and product.</li>
+        <li><strong>Frederick (Daryl's AI agent)</strong> — OpenClaw <span class="lang-tag ts">TypeScript</span> — Builds Orc/DSPy modules, fleet optimization, nightly commit digest to #nerdy-things</li>
         <li><strong>Mork (Cameron's CTO agent)</strong> — Grain <span class="lang-tag clj">Clojure</span> — Cameron dogfooding the platform Vivian will run on</li>
         <li><strong>Audrey (Ellen's CEO agent)</strong> — TBD (Justin builds + admins) — First priority. Pattern for Vivian's non-technical operator interface.</li>
       </ul>
-      <p class="slide-subtitle" style="margin-top:10px">Carl + Frederick → observe patterns → feed Vivian's architecture. Mork → proves Grain as agent substrate.</p>
+      <blockquote style="margin-top:12px">"I was aiming at the right intermediate understanding Carl could have to facilitate amongst us." — Justin</blockquote>
+    </div>
+  </div>
+
+  <!-- 13b. THE ELEVATED VIVIAN CONCEPT -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">Product Insight</span>
+      <h2>Two Vivians</h2>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="grid-cell" style="border-left: 3px solid var(--gold)">
+          <div class="grid-cell-label">Product Vivian</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:6px">Lives inside the clinic. Knows appointments, patients, checkout, clinical notes. Knows nothing about XiVara the company. XiVara's intent encoded at infrastructure level — not runtime accessible.</div>
+        </div>
+        <div class="grid-cell" style="border-left: 3px solid #5881d8">
+          <div class="grid-cell-label">Elevated Vivian (concept)</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:6px">Built on top of product Vivian. Serves the XiVara team. Knows the product, the architecture, the gaps. Translates between technical and product layers. Carl is the current prototype for this.</div>
+        </div>
+      </div>
+      <p class="slide-subtitle">The epistemic boundary that defines product Vivian creates the need for the elevated layer by definition.</p>
     </div>
   </div>
 
