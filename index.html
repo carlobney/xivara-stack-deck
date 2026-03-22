@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>XiVara Technical Stack</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222;
+    --accent: #ffffff;
+    --gold: #C5A467;
+    --muted: #666;
+    --text: #f0f0f0;
+    --tag: #2a2a2a;
+    --radius: 12px;
+    --slide-max: 680px;
+    --clojure: #5881d8;
+    --python: #3572A5;
+    --rust: #dea584;
+    --ts: #2b7489;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  #progress-bar { height: 3px; background: #222; flex-shrink: 0; }
+  #progress-fill { height: 100%; background: var(--gold); transition: width 0.3s ease; }
+
+  #deck { flex: 1; overflow: hidden; position: relative; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 28px 22px;
+    opacity: 0; transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease;
+    overflow-y: auto;
+  }
+  .slide.active { opacity: 1; transform: translateX(0); }
+  .slide.prev { opacity: 0; transform: translateX(-100%); }
+  .slide-inner { width: 100%; max-width: var(--slide-max); }
+  .slide-title .slide-inner { text-align: center; }
+
+  .slide-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  h1 { font-size: clamp(26px, 6.5vw, 48px); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(20px, 4.5vw, 32px); font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 16px; }
+  .slide-subtitle { font-size: clamp(14px, 2.8vw, 17px); color: var(--muted); margin-top: 12px; line-height: 1.5; }
+
+  p { font-size: clamp(14px, 3.2vw, 17px); line-height: 1.65; color: var(--text); margin-bottom: 10px; }
+
+  ul { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  li {
+    font-size: clamp(13px, 3vw, 16px); line-height: 1.5;
+    padding: 10px 14px; background: var(--surface); border-radius: 8px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  li::before { content: '→'; color: var(--muted); flex-shrink: 0; margin-top: 1px; }
+  li strong { color: #fff; }
+
+  .tag { display: inline-block; background: var(--tag); border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 14px; }
+  .lang-tag { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; margin-left: 6px; vertical-align: middle; }
+  .clj { background: #1a2040; color: var(--clojure); }
+  .py { background: #1a2030; color: var(--python); }
+  .prod { background: #0d2010; color: #4caf50; }
+  .research { background: #201a00; color: #ffc107; }
+
+  .callout { font-size: clamp(32px, 9vw, 64px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-bottom: 8px; color: var(--gold); }
+  .callout-label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  hr { border: none; border-top: 1px solid #222; margin: 16px 0; }
+
+  blockquote { border-left: 3px solid var(--gold); padding: 10px 14px; font-size: clamp(14px, 3.2vw, 18px); font-style: italic; line-height: 1.6; color: #ccc; margin: 12px 0; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .grid-cell { background: var(--surface); border-radius: var(--radius); padding: 14px; }
+  .grid-cell-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; }
+  .grid-cell-value { font-size: clamp(13px, 2.8vw, 15px); font-weight: 600; line-height: 1.4; }
+
+  /* Stack layer visualization */
+  .stack-layer {
+    padding: 12px 16px; border-radius: 8px; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 12px;
+    border-left: 3px solid transparent;
+  }
+  .stack-layer-name { font-weight: 700; font-size: 15px; flex: 0 0 130px; }
+  .stack-layer-desc { font-size: 13px; color: var(--muted); flex: 1; line-height: 1.4; }
+  .layer-vivian { background: #1a160a; border-color: var(--gold); }
+  .layer-orc { background: #0d1a1a; border-color: #4ecdc4; }
+  .layer-grain { background: #0d1a0d; border-color: #4caf50; }
+  .layer-dscloj { background: #1a1a0d; border-color: #cddc39; }
+  .layer-litellm { background: #1a0d1a; border-color: #9c27b0; }
+
+  /* Code block */
+  pre {
+    background: #111; border-radius: 8px; padding: 14px;
+    font-size: clamp(11px, 2.5vw, 13px); line-height: 1.6;
+    color: #ccc; overflow-x: auto; margin: 10px 0;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    border: 1px solid #222;
+  }
+  .kw { color: #569cd6; }
+  .fn { color: #dcdcaa; }
+  .str { color: #ce9178; }
+  .cm { color: #6a9955; }
+
+  /* Flow diagram */
+  .flow { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+  .flow-row { display: flex; align-items: center; gap: 8px; }
+  .flow-box { background: var(--surface); border-radius: 6px; padding: 8px 12px; font-size: 13px; font-weight: 600; flex: 1; text-align: center; }
+  .flow-arrow { color: var(--muted); font-size: 18px; flex-shrink: 0; }
+
+  /* Phase tracker */
+  .phase { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #1a1a1a; }
+  .phase:last-child { border-bottom: none; }
+  .phase-num { font-size: 11px; color: var(--muted); flex: 0 0 60px; }
+  .phase-name { font-size: 13px; flex: 1; }
+  .phase-status { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+  .status-done { background: #0d2010; color: #4caf50; }
+  .status-todo { background: #1a1a1a; color: var(--muted); }
+  .status-wip { background: #201a00; color: #ffc107; }
+
+  #nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; flex-shrink: 0; border-top: 1px solid #1a1a1a; }
+  .nav-btn { background: var(--surface); border: none; color: var(--text); width: 42px; height: 42px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, opacity 0.15s; -webkit-tap-highlight-color: transparent; }
+  .nav-btn:disabled { opacity: 0.2; cursor: default; }
+  .nav-btn:not(:disabled):active { background: #2a2a2a; }
+  #counter { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"><div id="progress-fill"></div></div>
+<div id="deck">
+
+  <!-- 1. TITLE -->
+  <div class="slide slide-title">
+    <div class="slide-inner">
+      <div class="slide-kicker">Technical Deep Dive · March 2026</div>
+      <h1 style="color:var(--gold)">XiVara</h1>
+      <h1>Technical Stack</h1>
+      <p class="slide-subtitle">From litellm-clj to Vivian — every layer, what it does, and why it exists</p>
+    </div>
+  </div>
+
+  <!-- 2. THE PHILOSOPHY -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">Philosophy</span>
+      <h2>AI-Native From the Ground Up</h2>
+      <ul>
+        <li><strong>Not bolted on.</strong> AI isn't a feature added to a scheduling tool. It's the architecture.</li>
+        <li><strong>Clojure-native.</strong> The LLM pipeline (DSCloj), the event store (Grain), and the behavior trees (ORC) are all Clojure. No Python glue layer for day-to-day work.</li>
+        <li><strong>Event-sourced truth.</strong> Everything that happens is an immutable fact. Vivian reasons over events, not mutable state.</li>
+        <li><strong>Polylith everywhere.</strong> One architecture pattern across all services — composable components that snap together.</li>
+        <li><strong>Self-improving.</strong> ORC behavior trees are trainable. GEPA closes the optimization loop.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3. STACK MAP -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">The Full Stack</span>
+      <h2>Dependency Chain</h2>
+      <div class="stack-layer layer-vivian">
+        <span class="stack-layer-name">🪙 Vivian / V</span>
+        <span class="stack-layer-desc">AI COO for med spas. Encodes XiVara's intent at the infrastructure level. Knows the clinic, not the company.</span>
+      </div>
+      <div class="stack-layer layer-orc">
+        <span class="stack-layer-name">🎼 ORC</span>
+        <span class="stack-layer-desc">Behavior tree executor. Skills → executable trees. LLM nodes tunable via GEPA. Sheet-service component inside the ORC harness.</span>
+      </div>
+      <div class="stack-layer layer-grain">
+        <span class="stack-layer-name">🌾 Grain</span>
+        <span class="stack-layer-desc">Event-sourced CQRS framework. Immutable events, projections, multi-tenant isolation, L1/L2 cache. Behavior trees + DSPy extensions built in.</span>
+      </div>
+      <div class="stack-layer layer-dscloj">
+        <span class="stack-layer-name">🧠 DSCloj</span>
+        <span class="stack-layer-desc">Declarative LLM modules in pure Clojure. Malli-typed I/O. predict → validate → prompt → call → parse. Primary LLM pipeline path.</span>
+      </div>
+      <div class="stack-layer layer-litellm">
+        <span class="stack-layer-name">⚡ litellm-clj</span>
+        <span class="stack-layer-desc">Universal LLM provider interface. OpenAI, Anthropic, Gemini, Mistral, Ollama, Azure. Streaming, function calling, runtime provider switching.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. LITELLM-CLJ -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">Layer 1 · ObneyAI/litellm-clj <span class="lang-tag clj">Clojure</span> <span class="lang-tag prod">Production</span></span>
+      <h2>litellm-clj</h2>
+      <p>Fork of unravel-team/litellm-clj. The universal LLM translator — one Clojure API for every provider.</p>
+      <div class="grid-2">
+        <div class="grid-cell">
+          <div class="grid-cell-label">Providers</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">OpenAI (GPT-5), Anthropic (Claude 4.5/4.1), Azure, OpenRouter, Gemini, Mistral, Ollama + more</div>
+        </div>
+        <div class="grid-cell">
+          <div class="grid-cell-label">Key Features</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">Streaming via core.async · Function calling · Router API for runtime model switching · Thread pool management</div>
+        </div>
+      </div>
+      <p class="slide-subtitle" style="margin-top:12px">Swap models without changing code. DSCloj sits on top of this.</p>
+    </div>
+  </div>
+
+  <!-- 5. DSCLOJ -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">Layer 2 · ObneyAI/DSCloj <span class="lang-tag clj">Clojure</span> <span class="lang-tag prod">Production</span></span>
+      <h2>DSCloj — Declarative LLM Pipelines</h2>
+      <p>Fork of unravel-team/DSCloj. Clojure-native DSPy. <strong>Primary LLM pipeline tool for most things.</strong></p>
+      <pre><span class="cm">;; Define a module with Malli-typed I/O</span>
+(<span class="kw">def</span> <span class="fn">intake-module</span>
+  {:inputs  [{:name :patient-notes  :spec :string}]
+   :outputs [{:name :risk-score     :spec [:int {:min 0 :max 100}]}
+             {:name :follow-up-date :spec :string}
+             {:name :flags          :spec [:vector :string]}]
+   :instructions <span class="str">"Analyze intake notes..."</span>})</pre>
+      <ul style="margin-top:8px">
+        <li><strong>Fork carries Cameron's PR #3</strong> — complex Malli schemas: maps, vectors, enums, nested types (not yet merged upstream)</li>
+        <li>predict = validate inputs → build prompt → call LLM → parse + validate outputs</li>
+        <li>Streaming via core.async for progressive output</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 6. GRAIN OVERVIEW -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">Layer 3 · ObneyAI/grain (event-store-v3) <span class="lang-tag clj">Clojure</span> <span class="lang-tag prod">Production</span></span>
+      <h2>Grain — The Platform Framework</h2>
+      <div class="flow">
+        <div class="flow-row">
+          <div class="flow-box">POST /command</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Validate rules</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Emit events</div>
+        </div>
+        <div class="flow-row" style="justify-content:center; color:var(--muted); font-size:20px">↓</div>
+        <div class="flow-row">
+          <div class="flow-box">Event Store<br><span style="font-size:11px; color:var(--muted)">Postgres · immutable · UUID v7</span></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Pub/Sub</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Todo Processors<br><span style="font-size:11px; color:var(--muted)">async workflows</span></div>
+        </div>
+        <div class="flow-row" style="justify-content:center; color:var(--muted); font-size:20px">↓</div>
+        <div class="flow-row">
+          <div class="flow-box">Read Model Processor<br><span style="font-size:11px; color:var(--muted)">projects events → state</span></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">POST /query<br><span style="font-size:11px; color:var(--muted)">reads projections</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. GRAIN MULTI-TENANCY + CACHE -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">Grain · Multi-Tenancy + Cache</span>
+      <h2>Built for 500 Clinics</h2>
+      <ul>
+        <li><strong>:tenant-id on every operation.</strong> Postgres Row-Level Security + per-tenant advisory locks. Two tenants never share a cache entry.</li>
+        <li><strong>L1 cache</strong> — in-process LRU atom. Zero serialization. Sub-millisecond reads. TTL configurable per read model.</li>
+        <li><strong>L2 cache</strong> — LMDB on disk, Fressian-serialized, survives restarts. Watermark-based — only replays events since last checkpoint.</li>
+        <li><strong>3 L2 strategies auto-selected:</strong> Monolithic (&lt;10K keys) · Segmented (≥10K, 64 hash segments) · Partitioned (per entity, e.g. patients-per-clinic)</li>
+      </ul>
+      <p class="slide-subtitle" style="margin-top:10px">Multi-tenancy isn't a feature. It's the invariant. Every layer enforces it.</p>
+    </div>
+  </div>
+
+  <!-- 8. GRAIN AI EXTENSIONS -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">Grain · AI/ML Extensions</span>
+      <h2>AI is a First-Class Citizen</h2>
+      <ul>
+        <li><strong>poly/behavior-tree-v2</strong> — behavior tree engine component baked into Grain. ORC's sheet-service runs on top of this.</li>
+        <li><strong>grain-dspy-extensions</strong> — libpython-clj2 bridge to Python DSPy. <code>defsignature</code> macro auto-generates Pydantic + DSPy Signature classes from Malli schemas. Escape hatch for genuine Python ML (GEPA optimization).</li>
+        <li><strong>DSCloj integration</strong> — primary path for LLM calls. Malli schemas unify the type system across commands, queries, read models, and LLM I/O.</li>
+        <li><strong>Langfuse</strong> — external observability component. Token tracking, trace storage, evaluation integration.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 9. ORC -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">Layer 4 · ObneyAI/orc <span class="lang-tag clj">Clojure + ClojureScript</span> <span class="lang-tag prod">Production</span></span>
+      <h2>ORC — The Behavior Tree Engine</h2>
+      <p>Full Polylith + Grain application harness. ORC = <em>Orchestral</em>. Short for orchestration.</p>
+      <div class="grid-2">
+        <div class="grid-cell">
+          <div class="grid-cell-label">sheet-service (ORC core)</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">Behavior trees · all node types · versioning · full tracing · self-description</div>
+        </div>
+        <div class="grid-cell">
+          <div class="grid-cell-label">Other Components</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">crm-service · user-service · langfuse · jwt · email · file-store · crypto · url-presigner</div>
+        </div>
+        <div class="grid-cell">
+          <div class="grid-cell-label">Frontend</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">ClojureScript · UIx (React) · re-frame · ShadCN · Reitit · Datastar (server-rendered, no SPA)</div>
+        </div>
+        <div class="grid-cell">
+          <div class="grid-cell-label">Sidecar</div>
+          <div class="grid-cell-value" style="font-weight:400; font-size:12px; margin-top:4px">Python 3.13 + UV alongside Clojure backend. For genuine Python ML workloads.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. ORC VISION -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">ORC Vision — Self-Improving Behaviors</span>
+      <h2>Skills → Trees → Optimization Loop</h2>
+      <ul>
+        <li><strong>Skills → Trees Pipeline</strong> — Skills become executable behavior trees. MCP tools researched via Tavily/Exa. Skill steps map to ORC nodes.</li>
+        <li><strong>Rolling Metric Monitoring</strong> — Event store tracks rolling averages; threshold breaches trigger failure analysis + auto-training.</li>
+        <li><strong>Tree Self-Description</strong> — Trees describe what they can solve. Builds a searchable library/ontology of capabilities.</li>
+        <li><strong>Best-of-N Generation</strong> — Generate N candidate trees, score against objectives, refine iteratively.</li>
+        <li><strong>Conversational Debugging</strong> — "Talk to traces" — load execution context, ask questions about failures.</li>
+        <li><strong>Personality Layer</strong> — Message filtering for Vivian's voice/tone.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 11. GEPA -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">ObneyAI/gepa-grain-research <span class="lang-tag py">Python</span> <span class="lang-tag research">Research</span></span>
+      <h2>GEPA — The Optimization Engine</h2>
+      <p>Genetic-Pareto prompt optimizer. Rebuilding from scratch in Python/DSPy (Daryl). 11-phase build plan.</p>
+      <p><strong>How it works:</strong> LLM analyzes failures → proposes instruction mutations → Pareto-selects best candidates across multiple objectives → new version deployed to ORC node.</p>
+      <div class="flow" style="margin-top:12px">
+        <div class="flow-row">
+          <div class="flow-box" style="font-size:12px">Trace Extraction</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box" style="font-size:12px">Evaluation<br>4 judges</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box" style="font-size:12px">Reflection</div>
+        </div>
+        <div class="flow-row" style="justify-content:center; color:var(--muted); font-size:18px">↓</div>
+        <div class="flow-row">
+          <div class="flow-box" style="font-size:12px">Instruction<br>Proposals</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box" style="font-size:12px">Pareto<br>Frontier</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box" style="font-size:12px">New ORC<br>Node Version</div>
+        </div>
+      </div>
+      <p class="slide-subtitle" style="margin-top:10px">Applied at individual node level with tree-level orchestration. Phase 0 of 11 — the most critical piece not yet in production.</p>
+    </div>
+  </div>
+
+  <!-- 12. DSCLOJ FORK STORY -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">The Fork Story</span>
+      <h2>Why ObneyAI Owns the Stack</h2>
+      <ul>
+        <li><strong>litellm-clj</strong> — forked from unravel-team. Maintained alongside upstream.</li>
+        <li><strong>DSCloj</strong> — forked from unravel-team. Cameron submitted PR #3 (complex Malli schemas: maps, vectors, enums, nested types). Upstream didn't merge. Fork carries it on branch <code>add-support-for-complex-maps-etc</code>.</li>
+        <li><strong>Grain</strong> — Cameron's original. Not a fork — built from scratch for XiVara's requirements.</li>
+        <li><strong>ORC</strong> — Built on Grain. Sheet-service is the behavior tree engine production has run on.</li>
+      </ul>
+      <blockquote style="margin-top:12px">"Our clj-dspy tools for the grain framework already support this kind of functionality, so we need it to replace our stuff with DSCloj!" — Cameron, PR #3</blockquote>
+    </div>
+  </div>
+
+  <!-- 13. THE FLEET -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">The Executive Fleet</span>
+      <h2>Who Runs on What</h2>
+      <ul>
+        <li><strong>Carl (Justin's CPO agent)</strong> — OpenClaw <span class="lang-tag ts">TypeScript</span> — Obsidian vault, Fireflies, Claude Code sessions, DSPy/Orc skill modules</li>
+        <li><strong>Frederick (Daryl's AI agent)</strong> — OpenClaw <span class="lang-tag ts">TypeScript</span> — Builds Orc/DSPy modules, fleet optimization, meta-task: improve all agents</li>
+        <li><strong>Mork (Cameron's CTO agent)</strong> — Grain <span class="lang-tag clj">Clojure</span> — Cameron dogfooding the platform Vivian will run on</li>
+        <li><strong>Audrey (Ellen's CEO agent)</strong> — TBD (Justin builds + admins) — First priority. Pattern for Vivian's non-technical operator interface.</li>
+      </ul>
+      <p class="slide-subtitle" style="margin-top:10px">Carl + Frederick → observe patterns → feed Vivian's architecture. Mork → proves Grain as agent substrate.</p>
+    </div>
+  </div>
+
+  <!-- 14. PROD VS RESEARCH -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">What's Live vs. What's Coming</span>
+      <h2>Production vs. Research</h2>
+      <div class="phase">
+        <span class="phase-num">litellm-clj</span>
+        <span class="phase-name">Universal LLM interface</span>
+        <span class="phase-status status-done">Production</span>
+      </div>
+      <div class="phase">
+        <span class="phase-num">DSCloj</span>
+        <span class="phase-name">Declarative LLM modules (forked, complex maps branch)</span>
+        <span class="phase-status status-done">Production</span>
+      </div>
+      <div class="phase">
+        <span class="phase-num">Grain</span>
+        <span class="phase-name">Event store, CQRS, cache, multi-tenancy</span>
+        <span class="phase-status status-done">Production</span>
+      </div>
+      <div class="phase">
+        <span class="phase-num">ORC sheet-service</span>
+        <span class="phase-name">Behavior trees, versioning, tracing</span>
+        <span class="phase-status status-done">Production</span>
+      </div>
+      <div class="phase">
+        <span class="phase-num">MCP Sheet Builder</span>
+        <span class="phase-name">5-phase intent analysis → pattern selection → REPL Researcher</span>
+        <span class="phase-status status-done">Complete</span>
+      </div>
+      <div class="phase">
+        <span class="phase-num">Rolling Metrics</span>
+        <span class="phase-name">Threshold alerts, failure analysis trigger</span>
+        <span class="phase-status status-wip">Priority 1</span>
+      </div>
+      <div class="phase">
+        <span class="phase-num">GEPA Loop</span>
+        <span class="phase-name">Node-level optimization, instruction tuning</span>
+        <span class="phase-status status-todo">Research</span>
+      </div>
+      <div class="phase">
+        <span class="phase-num">Tree self-description</span>
+        <span class="phase-name">Searchable capability library/ontology</span>
+        <span class="phase-status status-todo">Priority 3</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 15. HOW IT BECOMES VIVIAN -->
+  <div class="slide">
+    <div class="slide-inner">
+      <span class="tag">The Product</span>
+      <h2>How This Becomes Vivian</h2>
+      <ul>
+        <li><strong>Grain's event store</strong> = every patient interaction, booking, payment, inventory change — immutable facts Vivian reasons over</li>
+        <li><strong>Grain's projections</strong> = read models like "patients at churn risk," "Tuesday capacity," "Juvederm inventory" — always current, sub-millisecond</li>
+        <li><strong>DSCloj modules</strong> = Vivian's intelligence units — typed LLM calls with validated outputs. "Given these events, what's the recommended action?"</li>
+        <li><strong>ORC trees</strong> = Vivian's workflows — the actual logic of what she does. Trainable, versioned, self-describing.</li>
+        <li><strong>GEPA</strong> = how Vivian gets smarter — her behavior trees tune themselves on real clinic outcomes</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 16. CLOSING -->
+  <div class="slide slide-title">
+    <div class="slide-inner">
+      <div style="color:var(--gold); font-size:48px; margin-bottom:16px">V</div>
+      <blockquote style="text-align:left; font-size:clamp(15px,3.8vw,20px)">"The clinic is her world. XiVara is her nature."</blockquote>
+      <p class="slide-subtitle" style="margin-top:20px">litellm-clj → DSCloj → Grain → ORC → GEPA → Vivian<br>Every layer purpose-built. Nothing bolted on.</p>
+      <hr style="margin-top:20px">
+      <p style="color:var(--muted); font-size:12px; margin-top:16px">obney.ai / XiVara — Carl · March 2026<br>Repos: github.com/ObneyAI · DeepWiki: deepwiki.com/ObneyAI/grain</p>
+    </div>
+  </div>
+
+</div>
+
+<nav id="nav">
+  <button class="nav-btn" id="btn-prev" onclick="go(-1)" aria-label="Previous">←</button>
+  <span id="counter">1 / 1</span>
+  <button class="nav-btn" id="btn-next" onclick="go(1)" aria-label="Next">→</button>
+</nav>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let cur = 0, startX = 0;
+
+  function render() {
+    slides.forEach((s, i) => {
+      s.classList.remove('active', 'prev');
+      if (i === cur) s.classList.add('active');
+      else if (i < cur) s.classList.add('prev');
+    });
+    document.getElementById('counter').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('progress-fill').style.width = `${((cur + 1) / slides.length) * 100}%`;
+    document.getElementById('btn-prev').disabled = cur === 0;
+    document.getElementById('btn-next').disabled = cur === slides.length - 1;
+  }
+
+  function go(dir) {
+    const next = cur + dir;
+    if (next >= 0 && next < slides.length) { cur = next; render(); }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') go(-1);
+  });
+  document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+  });
+
+  render();
+</script>
+</body>
+</html>
